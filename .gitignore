@@ -1,0 +1,35 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# VSCode
+.vscode/
+
+# Generated data
+data/products/*
+data/historical/*
+data/inputs/*
+data/raw_inputs/*
+data/temp/*
+
+# Keep folder structure
+!data/products/.keep
+!data/historical/.keep
+!data/inputs/.keep
+!data/raw_inputs/.keep
+!data/temp/.keep
+
+# Models
+models/*
+!models/.keep
+
+# Logs / temp
+*.log
+*.csv
+
+# Environment
+.env
+*.conda
+*.yaml
+
+
