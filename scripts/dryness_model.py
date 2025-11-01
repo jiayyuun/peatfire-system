@@ -28,7 +28,8 @@ def run_module_2():
         dryness_cum = np.load(STATE_FILE)
     else:
         dryness_cum = np.zeros_like(step_sub)
-    dryness_cum = np.clip(dryness_cum + step_sub - step_up, 0, MAX_DRY_CM)
+    dryness_cum = np.ones_like(step_sub) * 2.0  # start at 2cm dryness
+
 
     # Save updated cumulative state for next cycle
     np.save(STATE_FILE, dryness_cum)
