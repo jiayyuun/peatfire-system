@@ -44,17 +44,21 @@ Quick Start
 
 Running the System
 ------------------
-Step 1 — Build historical synthetic dataset
+1. Build historical synthetic dataset (Terminal 1)
    cd scripts
    python module3_historical.py
    python train_model.py
-Step 2 — Start live synthetic displacement stream
+   
+3. Start live synthetic displacement stream (Terminal 1)
    python module2_stream.py
-Step 3 — Start background trainer (new data + continuous ML updates)
+   
+5. Start background trainer (new data + continuous ML updates) (Terminal 2)
    python background_trainer.py
-Step 4 — Run real‑time risk assessment
+   
+7. Run real‑time risk assessment (Terminal 3)
    python run_pipeline.py
-Step 5 — Live rolling dryness chart
+   
+9. Live rolling dryness chart (Terminal 3)
    python plot_dryness_live.py
 
 Output Interpretation
