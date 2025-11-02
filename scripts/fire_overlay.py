@@ -1,94 +1,72 @@
-# Module 3 — Simulate historical satellite input + build cumulative dryness training data
-import rasterio, numpy as np, pandas as pd, os
+# Module 3 — Clean historical data & build ML training table
+import rasterio
+import numpy as np
+import pandas as pd
+import glob, os
 from datetime import datetime
 
-RAW_DIR = "../data/raw_inputs/"
-HIST_PATH = "../data/historical/training_data.csv"
+DRYNESS_DIR = "../data/historical/dryness_maps/"
+FIRE_DIR     = "../data/historical/fire_masks/"
+OUT_CSV      = "../data/historical/training_data.csv"
 
-MAX_DRY_CM = 10
-RECOVERY_FACTOR = 0.3  # rewetting slower than drying
+SAMPLES_PER_FILE = 500  # number of pixels sampled per timestamp
 
-os.makedirs(RAW_DIR, exist_ok=True)
-os.makedirs("../data/historical", exist_ok=True)
+def load_raster(path):
+    with rasterio.open(path) as src:
+        arr = src.read(1)
+        profile = src.profile
+    return arr, profile
 
+def build_training_data():
+    dryness_files = sorted(glob.glob(f"{DRYNESS_DIR}/*.tif"))
+    fire_files    = sorted(glob.glob(f"{FIRE_DIR}/*.tif"))
 
-def simulate_displacement(path, seasonal_bias):
+    assert len(dryness_files) == len(fire_files), \
+        "Mismatch: dryness maps and fire masks count differ!"
 
-    # base random displacement, normal dist to force variability
-    fake_disp = np.random.normal(loc=seasonal_bias, scale=0.03, size=(100,100))
+    all_rows = []
 
-    # 5% chance extreme drought pulse
-    if np.random.rand() < 0.05:
-        fake_disp += -0.10
+    for dry_file, fire_file in zip(dryness_files, fire_files):
+        # Extract timestamp from filename
+        ts = os.path.basename(dry_file).split("_")[1].replace(".tif", "")
+        timestamp = datetime.strptime(ts, "%Y%m%d")
 
-    # 3% chance heavy rainstorm recharge
-    if np.random.rand() < 0.03:
-        fake_disp += 0.12
+        # Load rasters
+        dry_map, _  = load_raster(dry_file)
+        fire_map, _ = load_raster(fire_file)
 
-    # peat dome shape: center wetter, edges dry faster
-    rows, cols = fake_disp.shape
-    y, x = np.ogrid[:rows, :cols]
-    dist = np.sqrt((x-cols/2)**2 + (y-rows/2)**2)
-    edge_factor = dist / dist.max()  # 0 center → 1 edge
-    fake_disp += edge_factor * -0.02  # edges dry faster
+        # Ensure shapes match
+        if dry_map.shape != fire_map.shape:
+            print(f"[WARN] shape mismatch skipped: {dry_file}")
+            continue
 
-    # Save raster
-    profile = {"driver":"GTiff","dtype":"float32","width":100,"height":100,"count":1}
-    with rasterio.open(path, "w", **profile) as dst:
-        dst.write(fake_disp.astype(np.float32), 1)
+        # Flatten
+        dry_flat  = dry_map.flatten()
+        fire_flat = fire_map.flatten()
 
+        # Remove NaNs
+        mask = ~np.isnan(dry_flat)
+        dry_flat  = dry_flat[mask]
+        fire_flat = fire_flat[mask]
 
-def simulate_fire_mask(path, dryness):
-    mask = (np.random.rand(*dryness.shape) < dryness * 0.15).astype("uint8")
-    profile = {"driver":"GTiff","dtype":"uint8","width":100,"height":100,"count":1}
-    with rasterio.open(path, "w", **profile) as dst:
-        dst.write(mask, 1)
+        # Random sample
+        idx = np.random.choice(len(dry_flat), min(SAMPLES_PER_FILE, len(dry_flat)), replace=False)
 
+        batch = pd.DataFrame({
+            "timestamp": [timestamp]*len(idx),
+            "dryness": dry_flat[idx],
+            "fire_occurred": fire_flat[idx].astype(int)
+        })
 
-def run_module_3_stream():
+        all_rows.append(batch)
+        print(f"[OK] Processed {ts} → {len(batch)} samples")
 
-    # seasonal sinus forcing (more realistic than if/else)
-    doy = datetime.now().timetuple().tm_yday
-    season_wave = np.sin(2 * np.pi * (doy / 365))
-    seasonal_bias = 0.03 * season_wave - 0.02  # peaks dry, troughs wet
+    # Combine and save
+    full = pd.concat(all_rows)
+    full.to_csv(OUT_CSV, index=False)
 
-    disp_path = f"{RAW_DIR}/disp_{datetime.now().timestamp()}.tif"
-    simulate_displacement(disp_path, seasonal_bias)
+    print(f"\n✅ Module 3 complete — training dataset saved to {OUT_CSV}")
+    print(f"Total samples: {len(full)}")
 
-    with rasterio.open(disp_path) as src:
-        disp = src.read(1).astype(np.float32)
-
-    disp_cm = disp * 100
-    step_sub = np.clip(-disp_cm, 0, None)
-    step_up = np.clip(disp_cm, 0, None) * RECOVERY_FACTOR
-
-    # Initialize dryness memory on first run — random 0–3 cm head start
-    global dryness_cum
-    try:
-        dryness_cum
-    except NameError:
-        dryness_cum = np.random.uniform(0, 3, disp.shape)
-
-    # exponential memory decay (like groundwater)
-    dryness_cum = dryness_cum * 0.995 + step_sub - step_up
-    dryness_cum = np.clip(dryness_cum, 0, MAX_DRY_CM)
-
-    dryness_idx = np.clip(dryness_cum / MAX_DRY_CM, 0, 1)
-
-    fire_path = f"{RAW_DIR}/fire_{datetime.now().timestamp()}.tif"
-    simulate_fire_mask(fire_path, dryness_idx)
-
-    with rasterio.open(fire_path) as src:
-        fire = src.read(1)
-
-    # sample 500 random pixels
-    idx = np.random.choice(len(dryness_idx.flatten()), 500)
-    batch = pd.DataFrame({
-        "timestamp": [datetime.now()] * 500,
-        "dryness": dryness_idx.flatten()[idx],
-        "fire_occurred": fire.flatten()[idx]
-    })
-
-    batch.to_csv(HIST_PATH, mode="a", header=not os.path.exists(HIST_PATH), index=False)
-
-    return float(np.mean(dryness_idx)), int(np.mean(fire) > 0.01)
+if __name__ == "__main__":
+    build_training_data()

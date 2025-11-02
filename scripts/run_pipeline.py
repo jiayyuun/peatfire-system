@@ -51,3 +51,28 @@ elif risk == "MEDIUM":
     print("CAUTION — Drying trend detected.")
 else:
     print("SAFE — No action needed.")
+
+# --- Plot recent dryness history (last 10) ---
+try:
+    import pandas as pd
+    import matplotlib.pyplot as plt
+
+    df = pd.read_csv("../data/products/dryness_log.csv", header=None, names=["timestamp", "dryness"])
+
+    # Keep last 10 readings
+    tail = df.tail(10)
+
+    # Create plot
+    plt.figure(figsize=(6, 3))
+    plt.plot(tail["timestamp"], tail["dryness"], marker="o", linewidth=2)
+    plt.xticks(rotation=45, ha="right")
+    plt.title("Recent Dryness Index (Last 10 datapoints)")
+    plt.ylabel("Dryness Index (0–1)")
+    plt.ylim(0, 1)
+    plt.tight_layout()
+
+    plt.show()
+
+except Exception as e:
+    print(f"[WARN] Could not plot history: {e}")
+
