@@ -1,0 +1,89 @@
+"""
+Visualize Module 1 + Module 2 outputs
+Generate publication-quality maps for carbon credit reports
+"""
+
+import yaml
+from pathlib import Path
+import rasterio
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap, BoundaryNorm
+import geopandas as gpd
+from datetime import datetime
+
+class ResultVisualizer:
+    def __init__(self, config_path="config.yaml"):
+        """Initialize visualizer"""
+        with open(config_path, 'r') as f:
+            self.config = yaml.safe_load(f)
+        
+        self.products_dir = Path(self.config['output']['products'])
+        self.reports_dir = Path(self.config['output']['reports'])
+        self.reports_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.dpi = self.config['viz']['dpi']
+    
+    def load_data(self):
+        """Load all outputs"""
+        print("▶ Loading data...")
+        
+        # Rasters
+        with rasterio.open(self.products_dir / "subsidence_velocity.tif") as src:
+            self.subsidence = src.read(1)
+            self.extent = [src.bounds.left, src.bounds.right, 
+                          src.bounds.bottom, src.bounds.top]
+        
+        with rasterio.open(self.products_dir / "coherence_median.tif") as src:
+            self.coherence = src.read(1)
+        
+        with rasterio.open(self.products_dir / "vv_median.tif") as src:
+            self.vv = src.read(1)
+        
+        with rasterio.open(self.products_dir / "canal_risk_score.tif") as src:
+            self.risk = src.read(1)
+        
+        with rasterio.open(self.products_dir / "canal_classification.tif") as src:
+            self.canal_class = src.read(1)
+        
+        # Vectors
+        confirmed_path = self.products_dir / "canal_confirmed.shp"
+        potential_path = self.products_dir / "canal_potential.shp"
+        
+        self.confirmed_gdf = gpd.read_file(confirmed_path) if confirmed_path.exists() else None
+        self.potential_gdf = gpd.read_file(potential_path) if potential_path.exists() else None
+        
+        print("✓ Data loaded")
+    
+    def plot_subsidence_map(self):
+        """Subsidence velocity map with coherence overlay"""
+        print("▶ Creating subsidence map...")
+        
+        fig, ax = plt.subplots(figsize=(12, 10))
+        
+        # Subsidence as base layer (red=sinking, blue=stable)
+        cmap_sub = self.config['viz']['cmap_subsidence']
+        vmin, vmax = np.nanpercentile(self.subsidence, [5, 95])
+        
+        im = ax.imshow(
+            self.subsidence,
+            extent=self.extent,
+            cmap=cmap_sub,
+            vmin=vmin,
+            vmax=vmax,
+            alpha=0.9
+        )
+        
+        # Mask low coherence areas (transparent)
+        low_coh = self.coherence < self.config['processing']['coherence_threshold']
+        masked = np.ma.masked_where(~low_coh, low_coh)
+        ax.imshow(masked, extent=self.extent, cmap='gray', alpha=0.3)
+        
+        # Colorbar
+        cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        cbar.set_label('Subsidence Velocity (mm/yr)', fontsize=12)
+        
+        # Labels
+        ax.set_xlabel('Longitude', fontsize=12)
+        ax.set_ylabel('Latitude', fontsize=12)
+        ax.set_title('Coordinates', fontsize=12)
