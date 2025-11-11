@@ -1,0 +1,64 @@
+# ============================================
+# PEATGUARD v2.0 - Carbon Credit System
+# Windows Configuration File
+# ============================================
+
+# YOUR SENTINEL-1 DATA PATHS (edit these!)
+sentinel1:
+  slc_master: C:\Users\swedha\OneDrive\vscode\MR PEATLAND\peatfire-system-1\data\sentinel1_slc\S1A_IW_SLC__1SDV_20251026T215955_20251026T220022_061602_07B1DF_FE49.SAFE
+  slc_slave: C:\Users\swedha\OneDrive\vscode\MR PEATLAND\peatfire-system-1\data\sentinel1_slc\S1A_IW_SLC__1SDV_20251107T215954_20251107T220021_061777_07B8B7_EF0D.SAFE
+  
+  grd_files:
+    - C:\Users\swedha\OneDrive\vscode\MR PEATLAND\peatfire-system-1\data\sentinel1_grd\S1A_IW_GRDH_1SDV_20251026T215956_20251026T220021_061602_07B1DF_99ED_COG.SAFE
+    - C:\Users\swedha\OneDrive\vscode\MR PEATLAND\peatfire-system-1\data\sentinel1_grd\S1A_IW_GRDH_1SDV_20251107T215955_20251107T220020_061777_07B8B7_3088_COG.SAFE
+
+# DEM (leave as "auto" to use SNAP's auto-download)
+dem:
+  path: "auto"  # or "C:\\peatfire-system\\data\\dem\\srtm_peatland.tif"
+  
+# SNAP GPT executable location
+snap:
+  gpt_path: C:\\Program Files\\esa-snap\\bin\\gpt.exe
+  cache_size_gb: 8
+
+# OUTPUT DIRECTORIES
+output:
+  products: "C:\\peatfire-system\\data\\products"
+  reports: "C:\\peatfire-system\\data\\reports"
+  temp: "C:\\peatfire-system\\data\\temp"
+
+# PROCESSING PARAMETERS
+processing:
+  # InSAR parameters
+  subswath: "IW2"  # IW1, IW2, or IW3
+  polarization: "VV"
+  multilook_range: 4
+  multilook_azimuth: 1
+  coherence_threshold: 0.3  # pixels below this = masked
+  
+  # Canal detection parameters
+  vv_threshold_db: -18.0  # darker = water/canal
+  v_shape_radius_m: 150  # spatial scale for subsidence pattern
+  alignment_tolerance_m: 50  # max distance between dark line and V-shape
+  min_canal_length_m: 100  # filter out short noise lines
+
+# CARBON CREDIT CALCULATION
+carbon:
+  peat_bulk_density: 0.1  # g/cm³
+  carbon_fraction: 0.55  # 55% of peat is carbon
+  co2_to_carbon_ratio: 3.67  # molecular weight ratio
+
+# RISK CLASSIFICATION THRESHOLDS
+risk_thresholds:
+  confirmed: 0.8  # both V-shape + dark line aligned
+  high_potential: 0.6  # strong single indicator
+  moderate: 0.4  # weak anomaly
+  low: 0.0  # safe
+
+# VISUALIZATION
+viz:
+  dpi: 300
+  cmap_subsidence: "RdYlBu_r"  # red=sinking, blue=stable
+  cmap_risk: "YlOrRd"  # yellow=low, red=high
+
+
