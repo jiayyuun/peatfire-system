@@ -1,0 +1,49 @@
+<graph id="Graph">
+<version>1.0</version>
+<node id="Read-Master">
+<operator>Read</operator>
+<sources/>
+<parameters class="com.bc.ceres.binding.dom.XppDomElement">
+<file>${master}</file>
+</parameters>
+</node>
+<node id="Read-Slave">
+<operator>Read</operator>
+<sources/>
+<parameters class="com.bc.ceres.binding.dom.XppDomElement">
+<file>${slave}</file>
+</parameters>
+</node>
+<node id="Back-Geocoding">
+<operator>Back-Geocoding</operator>
+<sources>
+<sourceProduct refid="Read-Master"/>
+<sourceProduct.1 refid="Read-Slave"/>
+</sources>
+<parameters class="com.bc.ceres.binding.dom.XppDomElement">
+<demName>SRTM 1Sec HGT</demName>
+<demResamplingMethod>BILINEAR_INTERPOLATION</demResamplingMethod>
+<externalDEMFile/>
+<externalDEMNoDataValue>0.0</externalDEMNoDataValue>
+<resamplingType>BISINC_5_POINT_INTERPOLATION</resamplingType>
+<maskOutAreaWithoutElevation>true</maskOutAreaWithoutElevation>
+<outputRangeAzimuthOffset>false</outputRangeAzimuthOffset>
+<outputDerampDemodPhase>false</outputDerampDemodPhase>
+<disableReramp>false</disableReramp>
+<demName>SRTM 1Sec HGT</demName>
+<demResamplingMethod>BICUBIC_INTERPOLATION</demResamplingMethod>
+<resamplingType>BILINEAR_INTERPOLATION</resamplingType>
+<maskOutAreaWithoutElevation>false</maskOutAreaWithoutElevation>
+</parameters>
+</node>
+<node id="Write">
+<operator>Write</operator>
+<sources>
+<sourceProduct refid="Back-Geocoding"/>
+</sources>
+<parameters class="com.bc.ceres.binding.dom.XppDomElement">
+<file>${output}</file>
+<formatName>BEAM-DIMAP</formatName>
+</parameters>
+</node>
+</graph>
