@@ -14,13 +14,13 @@ fsspec==2025.10.0
 s3fs==2025.10.0
 
 # --- Numerical and scientific libraries ---
-numpy==2.3.4
-scipy==1.16.3
-pandas==2.3.3
+numpy>=2.2.0
+scipy>=1.15.0
+pandas>=2.2.0
 joblib==1.5.2
 
 # --- Machine learning and analytics ---
-scikit-learn==1.7.2
+scikit-learn>=1.6.0
 ruptures==1.1.9
 
 # --- Visualization and reporting ---
@@ -33,11 +33,11 @@ tqdm==4.66.5
 requests==2.32.3
 typing-extensions==4.12.2
 
-# --- Optional: remote access / Earthdata integration ---
-# earthaccess==0.15.1
-# python-cmr==0.13.0
+# --- Earthdata integration (Now Enabled) ---
+earthaccess>=0.11.0
+python-cmr>=0.9.0
 
-# --- Developer tools (optional, for Jupyter/testing) ---
+# --- Developer tools ---
 jupyterlab==4.2.5
 notebook==7.2.2
 black==24.10.0
